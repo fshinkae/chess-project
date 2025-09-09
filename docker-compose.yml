@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql-login
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: login_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - microservices-network
+
+  mongo-chat:
+    image: mongo:6
+    container_name: mongo-chat
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_chat_data:/data/db
+    networks:
+      - microservices-network
+
+  mongo-chess:
+    image: mongo:6
+    container_name: mongo-chess
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo_chess_data:/data/db
+    networks:
+      - microservices-network
+
+volumes:
+  mysql_data:
+  mongo_chat_data:
+  mongo_chess_data:
+
+networks:
+  microservices-network:
+    driver: bridge

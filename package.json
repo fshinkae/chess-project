@@ -1,0 +1,23 @@
+{
+  "name": "chess-project",
+  "version": "1.0.0",
+  "description": "Projeto de xadrez com microsserviços",
+  "scripts": {
+    "install:all": "npm install && concurrently \"cd login-service && npm install\" \"cd chat-service && npm install\" \"cd chess-service && npm install\" \"cd api-gateway && npm install\" \"cd frontend && npm install\"",
+    "dev:login": "cd login-service && npm run dev",
+    "dev:chat": "cd chat-service && npm run dev",
+    "dev:chess": "cd chess-service && npm run dev",
+    "dev:gateway": "cd api-gateway && npm run dev",
+    "dev:front": "cd frontend && npm run dev",
+    "dev:services": "concurrently -n \"login,chat,chess,gateway\" \"npm run dev:login\" \"npm run dev:chat\" \"npm run dev:chess\" \"npm run dev:gateway\"",
+    "dev": "concurrently -n \"services,frontend\" \"npm run dev:services\" \"npm run dev:front\"",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "kill-ports": "node scripts/kill-ports.js",
+    "clean": "npm run kill-ports && rm -rf */node_modules package-lock.json */package-lock.json && docker-compose down",
+    "start": "npm run clean && npm run docker:up && npm run install:all && npm run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
