@@ -1,6 +1,52 @@
 version: '3.8'
 
 services:
+  api-gateway:
+    build: 
+      context: ./backend/api-gateway
+    container_name: api-gateway
+    ports:
+      - "3000:3000"
+    networks:
+      - microservices-network
+    depends_on:
+      - login-service
+      - chess-service
+      - chat-service
+
+  login-service:
+    build:
+      context: ./backend/login-service
+    container_name: login-service
+    ports:
+      - "3001:3001"
+    networks:
+      - microservices-network
+    depends_on:
+      - mysql
+
+  chess-service:
+    build:
+      context: ./backend/chess-service
+    container_name: chess-service
+    ports:
+      - "3002:3002"
+    networks:
+      - microservices-network
+    depends_on:
+      - mongo-chess
+
+  chat-service:
+    build:
+      context: ./backend/chat-service
+    container_name: chat-service
+    ports:
+      - "3003:3003"
+    networks:
+      - microservices-network
+    depends_on:
+      - mongo-chat
+
   mysql:
     image: mysql:8
     container_name: mysql-login
