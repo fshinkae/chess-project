@@ -30,7 +30,14 @@ import {
   Tr,
   Th,
   Td,
-  TableContainer
+  TableContainer,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
+  IconButton,
+  Flex
 } from '@chakra-ui/react';
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
@@ -479,9 +486,27 @@ function Game() {
   };
 
   return (
-    <Container maxW="container.xl" py={8}>
-      {/* Diálogo de Proposta de Empate */}
-      {drawOffer && !gameOver && (
+    <Box bg="gray.100" minH="100vh">
+      <Flex justifyContent="space-between" alignItems="center" bg="white" p={2} borderBottom="1px" borderColor="gray.200">
+        <HStack spacing={8}>
+          <Text fontWeight="bold">Chess Game</Text>
+          <HStack>
+            <Button size="sm" variant="ghost">Análise</Button>
+            <Button size="sm" variant="ghost">Nova partida</Button>
+            <Button size="sm" variant="ghost">Partidas</Button>
+            <Button size="sm" variant="ghost">Jogadores</Button>
+          </HStack>
+        </HStack>
+        <HStack>
+          <Button size="sm" variant="outline" colorScheme="red" onClick={() => navigate('/')}>
+            Sair
+          </Button>
+        </HStack>
+      </Flex>
+      
+      <Box maxW="container.xl" mx="auto" py={4}>
+        {/* Diálogo de Proposta de Empate */}
+        {drawOffer && !gameOver && (
         <AlertDialog
           isOpen={true}
           leastDestructiveRef={cancelRef}
@@ -591,142 +616,161 @@ function Game() {
           </AlertDialogOverlay>
         </AlertDialog>
       )}
-      <Grid templateColumns="2fr 1fr" gap={8}>
+      <Grid templateColumns="auto 400px" gap={4}>
         <Box>
-          <VStack spacing={4} align="stretch" mb={4}>
-            <Box display="flex" justifyContent="space-between" alignItems="center">
-              <VStack align="start" spacing={2}>
-                <Heading size="md">
-                  {currentPlayer === user.id ? 'Sua vez de jogar' : 'Aguardando oponente...'}
-                </Heading>
-                <HStack spacing={4}>
+          {/* Timer e Controles */}
+          <Box bg="gray.800" p={2} mb={4}>
+            <HStack spacing={8} justifyContent="center">
+              <Box textAlign="center">
+                <Text color="white" fontSize="sm">Brancas</Text>
+                <Text color="white" fontSize="3xl" fontFamily="mono" fontWeight="bold">
+                  {timeControl ? `${Math.floor(timeControl[gameInfo.challenger] / 60000)}:${String(Math.floor((timeControl[gameInfo.challenger] % 60000) / 1000)).padStart(2, '0')}` : '10:00'}
+                </Text>
+              </Box>
+              <Box textAlign="center">
+                <Text color="white" fontSize="sm">Pretas</Text>
+                <Text color="white" fontSize="3xl" fontFamily="mono" fontWeight="bold">
+                  {timeControl ? `${Math.floor(timeControl[gameInfo.challenged] / 60000)}:${String(Math.floor((timeControl[gameInfo.challenged] % 60000) / 1000)).padStart(2, '0')}` : '10:00'}
+                </Text>
+              </Box>
+            </HStack>
+          </Box>
+
+          {/* Tabuleiro */}
+          <Box bg="white" p={4} borderRadius="md" shadow="md">
+            <Chessboard
+              position={game.fen()}
+              onPieceDrop={onDrop}
+              boardWidth={600}
+              boardOrientation={boardOrientation}
+            />
+          </Box>
+
+          {/* Controles do Jogo */}
+          <HStack spacing={2} mt={4} justifyContent="center">
+            <Button
+              colorScheme="yellow"
+              size="sm"
+              onClick={() => gameService.offerDraw(gameId)}
+              isDisabled={!!drawOffer || gameOver}
+            >
+              Propor Empate
+            </Button>
+            <Button
+              colorScheme="red"
+              size="sm"
+              onClick={() => {
+                if (window.confirm('Tem certeza que deseja desistir?')) {
+                  gameService.resign(gameId);
+                }
+              }}
+              isDisabled={gameOver}
+            >
+              Desistir
+            </Button>
+          </HStack>
+        </Box>
+
+        {/* Painel Lateral */}
+        <Box bg="white" borderRadius="md" shadow="md" overflow="hidden">
+          <Tabs>
+            <TabList bg="gray.50" borderBottomWidth="2px">
+              <Tab>Lances</Tab>
+              <Tab>Informações</Tab>
+              <Tab>Aberturas</Tab>
+            </TabList>
+
+            <TabPanels>
+              <TabPanel p={4}>
+                {/* Histórico de Jogadas */}
+                <TableContainer>
+                  <Table size="sm" variant="simple">
+                    <Thead>
+                      <Tr>
+                        <Th>Nº</Th>
+                        <Th>Brancas</Th>
+                        <Th>Pretas</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {moveHistory.map((move, index) => (
+                        <Tr key={index}>
+                          <Td>{move.number}</Td>
+                          <Td>{move.white || '-'}</Td>
+                          <Td>{move.black || '-'}</Td>
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
+                </TableContainer>
+              </TabPanel>
+
+              <TabPanel p={4}>
+                <VStack spacing={4} align="stretch">
+                  <Text fontSize="sm" color="gray.600">
+                    {currentPlayer === user.id ? 'Sua vez de jogar' : 'Aguardando oponente...'}
+                  </Text>
                   <Badge colorScheme={isChallenger ? 'green' : 'purple'}>
                     {isChallenger ? 'Peças Brancas' : 'Peças Pretas'}
                   </Badge>
-                  {timeControl && (
-                    <HStack spacing={8} bg="gray.700" p={2} borderRadius="md">
-                      <Box>
-                        <Text color="white" fontSize="sm">Brancas</Text>
-                        <Text color="white" fontSize="2xl" fontFamily="mono">
-                          {Math.floor(timeControl[gameInfo.challenger] / 60000)}:{String(Math.floor((timeControl[gameInfo.challenger] % 60000) / 1000)).padStart(2, '0')}
-                        </Text>
-                      </Box>
-                      <Box>
-                        <Text color="white" fontSize="sm">Pretas</Text>
-                        <Text color="white" fontSize="2xl" fontFamily="mono">
-                          {Math.floor(timeControl[gameInfo.challenged] / 60000)}:{String(Math.floor((timeControl[gameInfo.challenged] % 60000) / 1000)).padStart(2, '0')}
-                        </Text>
-                      </Box>
-                    </HStack>
-                  )}
-                </HStack>
-              </VStack>
-              <HStack spacing={2}>
-                <Button
-                  colorScheme="yellow"
-                  size="sm"
-                  onClick={() => gameService.offerDraw(gameId)}
-                  isDisabled={!!drawOffer || gameOver}
-                >
-                  Propor Empate
-                </Button>
-                <Button
-                  colorScheme="red"
-                  size="sm"
-                  onClick={() => {
-                    if (window.confirm('Tem certeza que deseja desistir?')) {
-                      gameService.resign(gameId);
-                    }
-                  }}
-                  isDisabled={gameOver}
-                >
-                  Desistir
-                </Button>
-              </HStack>
-            </Box>
-          </VStack>
-          <Chessboard
-            position={game.fen()}
-            onPieceDrop={onDrop}
-            boardWidth={600}
-            boardOrientation={boardOrientation}
-          />
-        </Box>
-        <VStack spacing={4} align="stretch">
-          <VStack spacing={4}>
-            {/* Histórico de Jogadas */}
-            <Box
-              borderWidth={1}
-              borderRadius="md"
-              p={4}
-              bg="white"
-              w="100%"
-              maxH="200px"
-              overflowY="auto"
-            >
-              <TableContainer>
-                <Table size="sm">
-                  <Thead>
-                    <Tr>
-                      <Th>Nº</Th>
-                      <Th>Brancas</Th>
-                      <Th>Pretas</Th>
-                    </Tr>
-                  </Thead>
-                  <Tbody>
-                    {moveHistory.map((move, index) => (
-                      <Tr key={index}>
-                        <Td>{move.number}</Td>
-                        <Td>{move.white || '-'}</Td>
-                        <Td>{move.black || '-'}</Td>
-                      </Tr>
-                    ))}
-                  </Tbody>
-                </Table>
-              </TableContainer>
-            </Box>
+                </VStack>
+              </TabPanel>
 
-            {/* Chat */}
+              <TabPanel p={4}>
+                <Text fontSize="sm" color="gray.600">
+                  Informações sobre aberturas aparecerão aqui
+                </Text>
+              </TabPanel>
+            </TabPanels>
+          </Tabs>
+
+          {/* Chat */}
+          <Box borderTopWidth="2px" borderColor="gray.100">
             <Box
               height="200px"
               overflowY="auto"
-              borderWidth={1}
-              borderRadius="md"
               p={4}
               bg="white"
-              w="100%"
             >
               <List spacing={3}>
                 {messages.map((message, index) => (
                   <ListItem
                     key={index}
-                    bg={message.sender === user.username ? 'blue.100' : 'gray.100'}
+                    bg={message.sender === user.username ? 'blue.50' : 'gray.50'}
                     p={2}
                     borderRadius="md"
                   >
-                    <Text fontWeight="bold">{message.sender}</Text>
-                    <Text>{message.content}</Text>
+                    <Text fontSize="sm" fontWeight="bold" color="gray.700">{message.sender}</Text>
+                    <Text fontSize="sm">{message.content}</Text>
                   </ListItem>
                 ))}
               </List>
             </Box>
-          </VStack>
-          <form onSubmit={sendMessage}>
-            <Grid templateColumns="1fr auto" gap={2}>
-              <Input
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Digite sua mensagem..."
-                bg="white"
-              />
-              <Button type="submit" colorScheme="blue">
-                Enviar
-              </Button>
-            </Grid>
-          </form>
-        </VStack>
+            <Box p={2} borderTopWidth="1px" borderColor="gray.100">
+              <form onSubmit={sendMessage}>
+                <Grid templateColumns="1fr auto" gap={2}>
+                  <Input
+                    size="sm"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Digite sua mensagem..."
+                    bg="white"
+                  />
+                  <IconButton
+                    size="sm"
+                    type="submit"
+                    colorScheme="blue"
+                    aria-label="Enviar mensagem"
+                    icon={<Text>➤</Text>}
+                  />
+                </Grid>
+              </form>
+            </Box>
+          </Box>
+        </Box>
       </Grid>
-    </Container>
+    </Box>
+    </Box>
   );
 }
 

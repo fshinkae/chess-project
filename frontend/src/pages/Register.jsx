@@ -1,16 +1,17 @@
 import {
   Box,
   Button,
-  Container,
-  FormControl,
-  FormLabel,
   Input,
   Stack,
   Heading,
   Text,
   Link as ChakraLink,
-  useToast
+  useToast,
+  HStack,
+  Center,
+  Icon
 } from '@chakra-ui/react';
+import { GiChessKnight } from 'react-icons/gi';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
@@ -89,69 +90,98 @@ function Register() {
   };
 
   return (
-    <Container maxW="lg" py={{ base: '12', md: '24' }} px={{ base: '0', sm: '8' }}>
-      <Stack spacing="8">
-        <Stack spacing="6">
-          <Stack spacing={{ base: '2', md: '3' }} textAlign="center">
-            <Heading size={{ base: 'xs', md: 'sm' }}>
-              Criar nova conta
-            </Heading>
-          </Stack>
-        </Stack>
-        <Box
-          py={{ base: '0', sm: '8' }}
-          px={{ base: '4', sm: '10' }}
-          bg={{ base: 'transparent', sm: 'bg-surface' }}
-          boxShadow={{ base: 'none', sm: 'md' }}
-          borderRadius={{ base: 'none', sm: 'xl' }}
-        >
-          <form onSubmit={handleSubmit}>
-            <Stack spacing="6">
-              <Stack spacing="5">
-                <FormControl isRequired>
-                  <FormLabel htmlFor="username">Nome de usuário</FormLabel>
-                  <Input
-                    id="username"
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    isDisabled={isLoading}
-                  />
-                </FormControl>
-                <FormControl isRequired>
-                  <FormLabel htmlFor="email">Email</FormLabel>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    isDisabled={isLoading}
-                  />
-                </FormControl>
-                <FormControl isRequired>
-                  <FormLabel htmlFor="password">Senha</FormLabel>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    isDisabled={isLoading}
-                  />
-                </FormControl>
-                <FormControl isRequired>
-                  <FormLabel htmlFor="confirmPassword">Confirmar Senha</FormLabel>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    isDisabled={isLoading}
-                  />
-                </FormControl>
-              </Stack>
+    <Center minH="100vh" bg="gray.50">
+      <Box
+        bg="white"
+        p={8}
+        rounded="lg"
+        shadow="lg"
+        w="full"
+        maxW="400px"
+        mx={4}
+      >
+        <Stack spacing={6} align="center">
+          <HStack spacing={2} align="center">
+            <Icon as={GiChessKnight} boxSize={10} color="gray.700" />
+            <Heading size="lg" fontFamily="mono">MicroChess</Heading>
+          </HStack>
+          <Text color="gray.600" fontSize="sm">
+            Entre ou crie sua conta para jogar
+          </Text>
+
+          <HStack w="full" spacing={2}>
+            <Button
+              flex={1}
+              variant="ghost"
+              size="sm"
+              as={Link}
+              to="/login"
+            >
+              Entrar
+            </Button>
+            <Button
+              flex={1}
+              variant="ghost"
+              size="sm"
+              as={Link}
+              to="/register"
+              bg="gray.100"
+            >
+              Registrar
+            </Button>
+          </HStack>
+
+          <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+            <Stack spacing={4}>
+              <Input
+                placeholder="Nome de usuário"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                size="lg"
+                bg="gray.50"
+                border={0}
+                required
+                isDisabled={isLoading}
+              />
+              <Input
+                placeholder="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                size="lg"
+                bg="gray.50"
+                border={0}
+                required
+                isDisabled={isLoading}
+              />
+              <Input
+                placeholder="Senha"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                size="lg"
+                bg="gray.50"
+                border={0}
+                required
+                isDisabled={isLoading}
+              />
+              <Input
+                placeholder="Confirmar senha"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                size="lg"
+                bg="gray.50"
+                border={0}
+                required
+                isDisabled={isLoading}
+              />
               <Button
                 type="submit"
-                colorScheme="blue"
+                colorScheme="blackAlpha"
+                size="lg"
+                w="full"
                 isLoading={isLoading}
                 loadingText="Criando conta..."
               >
@@ -159,17 +189,9 @@ function Register() {
               </Button>
             </Stack>
           </form>
-          <Stack spacing="6" mt="6">
-            <Text textAlign="center">
-              Já tem uma conta?{' '}
-              <ChakraLink as={Link} to="/login" color="blue.500">
-                Faça login
-              </ChakraLink>
-            </Text>
-          </Stack>
-        </Box>
-      </Stack>
-    </Container>
+        </Stack>
+      </Box>
+    </Center>
   );
 }
 

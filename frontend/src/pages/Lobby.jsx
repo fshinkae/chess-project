@@ -10,6 +10,7 @@ import {
   Badge,
   useToast,
   VStack,
+  HStack,
   Spinner,
   Center,
   AlertDialog,
@@ -18,8 +19,16 @@ import {
   AlertDialogHeader,
   AlertDialogContent,
   AlertDialogOverlay,
-  useDisclosure
+  useDisclosure,
+  Flex,
+  Icon,
+  Tabs,
+  TabList,
+  Tab,
+  TabPanels,
+  TabPanel
 } from '@chakra-ui/react';
+import { GiChessKnight } from 'react-icons/gi';
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
@@ -178,67 +187,125 @@ function Lobby() {
   }
 
   return (
-    <Container maxW="container.xl" py={8}>
-      <VStack spacing={8} align="stretch">
-        <Box>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-            <Heading size="lg">
-              Bem-vindo, {user?.username}!
-            </Heading>
-            <Button
-              colorScheme="red"
-              variant="outline"
-              onClick={() => {
-                logout();
-                navigate('/login');
-              }}
-            >
-              Sair
-            </Button>
+    <Box bg="gray.100" minH="100vh">
+      <Flex justifyContent="space-between" alignItems="center" bg="white" p={2} borderBottom="1px" borderColor="gray.200">
+        <HStack spacing={8}>
+          <HStack spacing={2}>
+            <Icon as={GiChessKnight} boxSize={8} color="gray.700" />
+            <Heading size="md" fontFamily="mono">MicroChess</Heading>
+          </HStack>
+          <HStack>
+            <Button size="sm" variant="ghost">Análise</Button>
+            <Button size="sm" variant="ghost">Nova partida</Button>
+            <Button size="sm" variant="ghost">Partidas</Button>
+            <Button size="sm" variant="ghost">Jogadores</Button>
+          </HStack>
+        </HStack>
+        <HStack spacing={4}>
+          <Text fontWeight="medium">Olá, {user?.username}!</Text>
+          <Button
+            size="sm"
+            variant="outline"
+            colorScheme="red"
+            onClick={() => {
+              logout();
+              navigate('/login');
+            }}
+          >
+            Sair
+          </Button>
+        </HStack>
+      </Flex>
+
+      <Box maxW="container.xl" mx="auto" py={6} px={4}>
+        <Grid templateColumns="1fr 300px" gap={6}>
+          <Box bg="white" p={6} rounded="lg" shadow="md">
+            <Tabs>
+              <TabList>
+                <Tab>Jogadores Online</Tab>
+                <Tab>Histórico</Tab>
+                <Tab>Ranking</Tab>
+              </TabList>
+
+              <TabPanels>
+                <TabPanel px={0}>
+                  <List spacing={3}>
+                    {onlineUsers.length === 0 ? (
+                      <Text color="gray.500" py={4}>
+                        Nenhum outro jogador online no momento...
+                      </Text>
+                    ) : (
+                      onlineUsers.map((onlineUser) => (
+                        <ListItem
+                          key={onlineUser.id}
+                          p={4}
+                          bg="gray.50"
+                          borderRadius="md"
+                          display="flex"
+                          justifyContent="space-between"
+                          alignItems="center"
+                          _hover={{ bg: 'gray.100' }}
+                        >
+                          <Box>
+                            <Text fontWeight="bold">{onlineUser.username}</Text>
+                            <Badge
+                              colorScheme={onlineUser.status === 'available' ? 'green' : 'orange'}
+                              variant="subtle"
+                            >
+                              {onlineUser.status === 'available' ? 'Disponível' : 'Em jogo'}
+                            </Badge>
+                          </Box>
+                          {onlineUser.status === 'available' && (
+                            <Button
+                              colorScheme="blackAlpha"
+                              size="sm"
+                              onClick={() => challengeUser(onlineUser.id, onlineUser.username)}
+                            >
+                              Desafiar
+                            </Button>
+                          )}
+                        </ListItem>
+                      ))
+                    )}
+                  </List>
+                </TabPanel>
+                <TabPanel>
+                  <Text color="gray.500">Histórico de partidas em breve...</Text>
+                </TabPanel>
+                <TabPanel>
+                  <Text color="gray.500">Ranking de jogadores em breve...</Text>
+                </TabPanel>
+              </TabPanels>
+            </Tabs>
           </Box>
-          <Heading size="md" mb={4}>
-            Jogadores Online
-          </Heading>
-          <List spacing={3}>
-            {onlineUsers.length === 0 ? (
-              <Text color="gray.500">
-                Nenhum outro jogador online no momento...
-              </Text>
-            ) : (
-              onlineUsers.map((onlineUser) => (
-                <ListItem
-                  key={onlineUser.id}
-                  p={4}
-                  bg="white"
-                  borderRadius="md"
-                  boxShadow="sm"
-                  display="flex"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <Box>
-                    <Text fontWeight="bold">{onlineUser.username}</Text>
-                    <Badge
-                      colorScheme={onlineUser.status === 'available' ? 'green' : 'orange'}
-                    >
-                      {onlineUser.status === 'available' ? 'Disponível' : 'Em jogo'}
-                    </Badge>
-                  </Box>
-                  {onlineUser.status === 'available' && (
-                    <Button
-                      colorScheme="blue"
-                      size="sm"
-                      onClick={() => challengeUser(onlineUser.id, onlineUser.username)}
-                    >
-                      Desafiar
-                    </Button>
-                  )}
-                </ListItem>
-              ))
-            )}
-          </List>
-        </Box>
-      </VStack>
+
+          <Box bg="white" p={6} rounded="lg" shadow="md" height="fit-content">
+            <VStack align="stretch" spacing={4}>
+              <Heading size="md">Estatísticas</Heading>
+              <Box p={4} bg="gray.50" rounded="md">
+                <VStack align="stretch" spacing={3}>
+                  <HStack justify="space-between">
+                    <Text>Partidas jogadas</Text>
+                    <Text fontWeight="bold">0</Text>
+                  </HStack>
+                  <HStack justify="space-between">
+                    <Text>Vitórias</Text>
+                    <Text fontWeight="bold" color="green.500">0</Text>
+                  </HStack>
+                  <HStack justify="space-between">
+                    <Text>Derrotas</Text>
+                    <Text fontWeight="bold" color="red.500">0</Text>
+                  </HStack>
+                  <HStack justify="space-between">
+                    <Text>Empates</Text>
+                    <Text fontWeight="bold" color="gray.500">0</Text>
+                  </HStack>
+                </VStack>
+              </Box>
+            </VStack>
+          </Box>
+        </Grid>
+      </Box>
 
       <ChallengeDialog
         isOpen={isOpen}
@@ -247,7 +314,7 @@ function Lobby() {
         onAccept={handleAcceptChallenge}
         onDecline={handleDeclineChallenge}
       />
-    </Container>
+    </Box>
   );
 }
 

@@ -9,17 +9,19 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@chakra-ui/icons": "^2.2.4",
     "@chakra-ui/react": "^2.8.2",
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.0",
     "axios": "^1.6.7",
+    "chess.js": "^1.0.0-beta.7",
     "framer-motion": "^11.0.8",
     "react": "^18.2.0",
+    "react-chessboard": "^4.4.0",
     "react-dom": "^18.2.0",
+    "react-icons": "^5.5.0",
     "react-router-dom": "^6.22.2",
     "socket.io-client": "^4.7.4",
-    "react-chessboard": "^4.4.0",
-    "chess.js": "^1.0.0-beta.7",
     "zustand": "^4.5.1"
   },
   "devDependencies": {
