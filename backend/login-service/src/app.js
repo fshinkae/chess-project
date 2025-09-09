@@ -6,7 +6,7 @@ const app = express();
 
 // Configuração CORS detalhada
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'], // Frontend e API Gateway
+  origin: /http:\/\/localhost:\d+/, // Aceita qualquer porta do localhost em desenvolvimento
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true

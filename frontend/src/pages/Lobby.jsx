@@ -65,7 +65,7 @@ function Lobby() {
   const [isConnecting, setIsConnecting] = useState(true);
   const [challenge, setChallenge] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const { user, token } = useAuthStore();
+  const { user, token, logout } = useAuthStore();
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -74,7 +74,11 @@ function Lobby() {
     console.log('Iniciando conexão com socket, usuário:', user);
 
     const newSocket = io('http://localhost:3002', {
-      auth: { token }
+      auth: { token },
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000
     });
 
     newSocket.on('connect', () => {
@@ -177,9 +181,21 @@ function Lobby() {
     <Container maxW="container.xl" py={8}>
       <VStack spacing={8} align="stretch">
         <Box>
-          <Heading size="lg" mb={4}>
-            Bem-vindo, {user?.username}!
-          </Heading>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+            <Heading size="lg">
+              Bem-vindo, {user?.username}!
+            </Heading>
+            <Button
+              colorScheme="red"
+              variant="outline"
+              onClick={() => {
+                logout();
+                navigate('/login');
+              }}
+            >
+              Sair
+            </Button>
+          </Box>
           <Heading size="md" mb={4}>
             Jogadores Online
           </Heading>

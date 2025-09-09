@@ -3,6 +3,7 @@ import {
   Container,
   Grid,
   VStack,
+  HStack,
   Text,
   Input,
   Button,
@@ -14,11 +15,24 @@ import {
   AlertIcon,
   AlertTitle,
   AlertDescription,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
   Spinner,
   Center,
-  Badge
+  Badge,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  TableContainer
 } from '@chakra-ui/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Chessboard } from 'react-chessboard';
 import { Chess } from 'chess.js';
@@ -33,6 +47,14 @@ function Game() {
   const [isConnecting, setIsConnecting] = useState(true);
   const [connectionError, setConnectionError] = useState(null);
   const [gameInfo, setGameInfo] = useState(null);
+  const [gameOver, setGameOver] = useState(null);
+  const [rematchOffer, setRematchOffer] = useState(null);
+  const [rematchTimer, setRematchTimer] = useState(null);
+  const [drawOffer, setDrawOffer] = useState(null);
+  const [moveHistory, setMoveHistory] = useState([]);
+  const [timeControl, setTimeControl] = useState(null);
+  const timeUpdateInterval = useRef(null);
+  const cancelRef = useRef();
   const { user, token } = useAuthStore();
   const { id: gameId } = useParams();
   const location = useLocation();
@@ -80,12 +102,213 @@ function Game() {
           }
           setCurrentPlayer(state.currentPlayer);
           setGameInfo(state.gameInfo);
+          setTimeControl(state.timeControl);
+
+          // Atualiza o tempo localmente a cada segundo para o jogador atual
+          if (timeUpdateInterval.current) {
+            clearInterval(timeUpdateInterval.current);
+          }
+
+          // Atualiza o tempo para ambos os jogadores
+          timeUpdateInterval.current = setInterval(() => {
+            setTimeControl(prev => {
+              if (!prev) return prev;
+              const now = Date.now();
+              const elapsed = now - prev.lastMoveTime;
+              
+              // Só atualiza o tempo do jogador atual
+              if (state.currentPlayer) {
+                return {
+                  ...prev,
+                  [state.currentPlayer]: Math.max(0, prev[state.currentPlayer] - elapsed),
+                  lastMoveTime: now
+                };
+              }
+              return prev;
+            });
+          }, 100);
         });
 
         chessSocket.on('move', ({ from, to }) => {
           if (!mounted) return;
           console.log('Movimento recebido:', { from, to });
           makeMove(from, to);
+        });
+
+        // Eventos de empate
+        chessSocket.on('draw_offered', ({ offeredBy, username, remainingTime }) => {
+          if (!mounted) return;
+          setDrawOffer({ offeredBy, username, remainingTime });
+
+          toast({
+            title: 'Proposta de Empate',
+            description: `${username} propôs empate`,
+            status: 'info',
+            duration: null,
+            isClosable: true
+          });
+        });
+
+        chessSocket.on('draw_declined', ({ declinedBy, username }) => {
+          if (!mounted) return;
+          setDrawOffer(null);
+          
+          toast({
+            title: 'Empate Recusado',
+            description: `${username} recusou o empate`,
+            status: 'info',
+            duration: 3000,
+            isClosable: true
+          });
+        });
+
+        chessSocket.on('draw_offer_expired', () => {
+          if (!mounted) return;
+          setDrawOffer(null);
+          
+          toast({
+            title: 'Proposta Expirada',
+            description: 'O tempo para aceitar o empate expirou',
+            status: 'warning',
+            duration: 3000,
+            isClosable: true
+          });
+        });
+
+        // Eventos de revanche
+        chessSocket.on('rematch_proposed', ({ proposedBy, username, remainingTime }) => {
+          if (!mounted) return;
+          setRematchOffer({ proposedBy, username, remainingTime });
+
+          toast({
+            title: 'Proposta de Revanche',
+            description: `${username} propôs uma revanche`,
+            status: 'info',
+            duration: null,
+            isClosable: true
+          });
+        });
+
+        chessSocket.on('rematch_declined', ({ declinedBy, username }) => {
+          if (!mounted) return;
+          setRematchOffer(null);
+          
+          toast({
+            title: 'Revanche Recusada',
+            description: `${username} recusou a revanche`,
+            status: 'info',
+            duration: 3000,
+            isClosable: true
+          });
+        });
+
+        chessSocket.on('rematch_expired', () => {
+          if (!mounted) return;
+          setRematchOffer(null);
+          
+          toast({
+            title: 'Proposta Expirada',
+            description: 'O tempo para aceitar a revanche expirou',
+            status: 'warning',
+            duration: 3000,
+            isClosable: true
+          });
+        });
+
+        chessSocket.on('rematch_accepted', ({ newGameId }) => {
+          if (!mounted) return;
+          
+          // Limpa os estados antes de navegar
+          setGameOver(null);
+          setRematchOffer(null);
+          setDrawOffer(null);
+          setMoveHistory([]);
+          
+          // Navega para o novo jogo
+          navigate(`/game/${newGameId}`, { replace: true });
+        });
+
+        // Eventos de fim de jogo
+        chessSocket.on('game_over', ({ reason, winner, remainingTime, message: serverMessage }) => {
+          if (!mounted) return;
+          
+          let endMessage = serverMessage;
+          if (!endMessage) {
+            switch (reason) {
+              case 'checkmate':
+                endMessage = 'Xeque-mate!';
+                break;
+              case 'draw':
+                endMessage = 'Empate!';
+                break;
+              case 'stalemate':
+                endMessage = 'Rei afogado!';
+                break;
+              case 'draw_accepted':
+                endMessage = 'Empate por acordo mútuo!';
+                break;
+              case 'resignation':
+                endMessage = `${winner === user.id ? 'Oponente desistiu!' : 'Você desistiu!'}`;
+                break;
+              default:
+                endMessage = 'Fim de jogo!';
+            }
+          }
+
+          setGameOver({ reason, winner, message: endMessage });
+          setRematchTimer(remainingTime);
+
+          // Inicia o contador regressivo
+          const interval = setInterval(() => {
+            setRematchTimer(prev => {
+              if (prev <= 1000) {
+                clearInterval(interval);
+                return 0;
+              }
+              return prev - 1000;
+            });
+          }, 1000);
+        });
+
+        chessSocket.on('rematch_pending', ({ acceptedBy, username }) => {
+          if (!mounted) return;
+          setRematchStatus({ status: 'pending', acceptedBy, username });
+          toast({
+            title: 'Revanche',
+            description: `${username} aceitou a revanche!`,
+            status: 'info',
+            duration: 3000,
+            isClosable: true
+          });
+        });
+
+        chessSocket.on('rematch_accepted', ({ newGameId }) => {
+          if (!mounted) return;
+          navigate(`/game/${newGameId}`);
+        });
+
+        chessSocket.on('rematch_declined', ({ declinedBy, username }) => {
+          if (!mounted) return;
+          setRematchStatus({ status: 'declined', declinedBy, username });
+          toast({
+            title: 'Revanche recusada',
+            description: `${username} recusou a revanche.`,
+            status: 'info',
+            duration: 3000,
+            isClosable: true
+          });
+        });
+
+        chessSocket.on('rematch_expired', () => {
+          if (!mounted) return;
+          setRematchStatus({ status: 'expired' });
+          toast({
+            title: 'Tempo esgotado',
+            description: 'O tempo para aceitar a revanche expirou.',
+            status: 'warning',
+            duration: 3000,
+            isClosable: true
+          });
         });
 
         // Eventos do chat
@@ -116,6 +339,9 @@ function Game() {
 
     return () => {
       mounted = false;
+      if (timeUpdateInterval.current) {
+        clearInterval(timeUpdateInterval.current);
+      }
       gameService.disconnect();
     };
   }, [gameId, token, user]);
@@ -133,19 +359,14 @@ function Game() {
         setGame(newGame);
         gameService.sendMove(from, to);
 
-        if (newGame.isGameOver()) {
-          let endMessage = 'Fim de jogo: ';
-          if (newGame.isCheckmate()) endMessage += 'Xeque-mate!';
-          else if (newGame.isDraw()) endMessage += 'Empate!';
-          else if (newGame.isStalemate()) endMessage += 'Rei afogado!';
+        // Atualiza o histórico de jogadas
+        setMoveHistory(prev => [...prev, {
+          number: Math.floor(prev.length / 2) + 1,
+          white: prev.length % 2 === 0 ? move.san : null,
+          black: prev.length % 2 === 1 ? move.san : null
+        }]);
 
-          toast({
-            title: endMessage,
-            status: 'info',
-            duration: null,
-            isClosable: true
-          });
-        }
+        // O fim do jogo agora é tratado pelo servidor
       }
     } catch (error) {
       console.error('Erro ao fazer movimento:', error);
@@ -247,17 +468,182 @@ function Game() {
     );
   }
 
+  // Funções para lidar com a revanche
+  const handleAcceptRematch = () => {
+    gameService.acceptRematch(gameId);
+  };
+
+  const handleDeclineRematch = () => {
+    gameService.declineRematch(gameId);
+    navigate('/');
+  };
+
   return (
     <Container maxW="container.xl" py={8}>
+      {/* Diálogo de Proposta de Empate */}
+      {drawOffer && !gameOver && (
+        <AlertDialog
+          isOpen={true}
+          leastDestructiveRef={cancelRef}
+          onClose={() => {}}
+          isCentered
+        >
+          <AlertDialogOverlay>
+            <AlertDialogContent>
+              <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                Proposta de Empate
+              </AlertDialogHeader>
+
+              <AlertDialogBody>
+                <VStack spacing={4}>
+                  <Text>
+                    {drawOffer.username} propôs empate.
+                  </Text>
+                  <Text>
+                    Tempo para aceitar: {Math.ceil(drawOffer.remainingTime / 1000)}s
+                  </Text>
+                </VStack>
+              </AlertDialogBody>
+
+              <AlertDialogFooter>
+                <Button
+                  ref={cancelRef}
+                  onClick={() => {
+                    gameService.declineDraw(gameId);
+                    setDrawOffer(null);
+                  }}
+                  mr={3}
+                >
+                  Recusar
+                </Button>
+                <Button
+                  colorScheme="blue"
+                  onClick={() => {
+                    gameService.acceptDraw(gameId);
+                    setDrawOffer(null);
+                  }}
+                >
+                  Aceitar
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialogOverlay>
+        </AlertDialog>
+      )}
+
+      {/* Diálogo de Fim de Jogo */}
+      {gameOver && (
+        <AlertDialog
+          isOpen={true}
+          leastDestructiveRef={cancelRef}
+          onClose={() => {}}
+          isCentered
+        >
+          <AlertDialogOverlay>
+            <AlertDialogContent>
+              <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                {gameOver.message}
+              </AlertDialogHeader>
+
+              <AlertDialogBody>
+                <VStack spacing={4}>
+                  <Text>
+                    {gameOver.winner === user.id ? 'Você venceu!' : 'Você perdeu!'}
+                  </Text>
+                  {rematchOffer && (
+                    <Text>
+                      {rematchOffer.username} propôs revanche! 
+                      Tempo restante: {Math.ceil(rematchOffer.remainingTime / 1000)}s
+                    </Text>
+                  )}
+                </VStack>
+              </AlertDialogBody>
+
+              <AlertDialogFooter>
+                <Button
+                  onClick={() => {
+                    if (rematchOffer) {
+                      gameService.declineRematch(gameId);
+                    }
+                    navigate('/');
+                  }}
+                  mr={3}
+                >
+                  Voltar ao Lobby
+                </Button>
+                {rematchOffer ? (
+                  <Button
+                    colorScheme="blue"
+                    onClick={() => gameService.acceptRematch(gameId)}
+                  >
+                    Aceitar Revanche
+                  </Button>
+                ) : (
+                  <Button
+                    colorScheme="blue"
+                    onClick={() => gameService.proposeRematch(gameId)}
+                  >
+                    Propor Revanche
+                  </Button>
+                )}
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialogOverlay>
+        </AlertDialog>
+      )}
       <Grid templateColumns="2fr 1fr" gap={8}>
         <Box>
           <VStack spacing={4} align="stretch" mb={4}>
-            <Heading size="md">
-              {currentPlayer === user.id ? 'Sua vez de jogar' : 'Aguardando oponente...'}
-            </Heading>
-            <Badge colorScheme={isChallenger ? 'green' : 'purple'} alignSelf="start">
-              {isChallenger ? 'Peças Brancas' : 'Peças Pretas'}
-            </Badge>
+            <Box display="flex" justifyContent="space-between" alignItems="center">
+              <VStack align="start" spacing={2}>
+                <Heading size="md">
+                  {currentPlayer === user.id ? 'Sua vez de jogar' : 'Aguardando oponente...'}
+                </Heading>
+                <HStack spacing={4}>
+                  <Badge colorScheme={isChallenger ? 'green' : 'purple'}>
+                    {isChallenger ? 'Peças Brancas' : 'Peças Pretas'}
+                  </Badge>
+                  {timeControl && (
+                    <HStack spacing={8} bg="gray.700" p={2} borderRadius="md">
+                      <Box>
+                        <Text color="white" fontSize="sm">Brancas</Text>
+                        <Text color="white" fontSize="2xl" fontFamily="mono">
+                          {Math.floor(timeControl[gameInfo.challenger] / 60000)}:{String(Math.floor((timeControl[gameInfo.challenger] % 60000) / 1000)).padStart(2, '0')}
+                        </Text>
+                      </Box>
+                      <Box>
+                        <Text color="white" fontSize="sm">Pretas</Text>
+                        <Text color="white" fontSize="2xl" fontFamily="mono">
+                          {Math.floor(timeControl[gameInfo.challenged] / 60000)}:{String(Math.floor((timeControl[gameInfo.challenged] % 60000) / 1000)).padStart(2, '0')}
+                        </Text>
+                      </Box>
+                    </HStack>
+                  )}
+                </HStack>
+              </VStack>
+              <HStack spacing={2}>
+                <Button
+                  colorScheme="yellow"
+                  size="sm"
+                  onClick={() => gameService.offerDraw(gameId)}
+                  isDisabled={!!drawOffer || gameOver}
+                >
+                  Propor Empate
+                </Button>
+                <Button
+                  colorScheme="red"
+                  size="sm"
+                  onClick={() => {
+                    if (window.confirm('Tem certeza que deseja desistir?')) {
+                      gameService.resign(gameId);
+                    }
+                  }}
+                  isDisabled={gameOver}
+                >
+                  Desistir
+                </Button>
+              </HStack>
+            </Box>
           </VStack>
           <Chessboard
             position={game.fen()}
@@ -267,28 +653,64 @@ function Game() {
           />
         </Box>
         <VStack spacing={4} align="stretch">
-          <Box
-            height="400px"
-            overflowY="auto"
-            borderWidth={1}
-            borderRadius="md"
-            p={4}
-            bg="white"
-          >
-            <List spacing={3}>
-              {messages.map((message, index) => (
-                <ListItem
-                  key={index}
-                  bg={message.sender === user.username ? 'blue.100' : 'gray.100'}
-                  p={2}
-                  borderRadius="md"
-                >
-                  <Text fontWeight="bold">{message.sender}</Text>
-                  <Text>{message.content}</Text>
-                </ListItem>
-              ))}
-            </List>
-          </Box>
+          <VStack spacing={4}>
+            {/* Histórico de Jogadas */}
+            <Box
+              borderWidth={1}
+              borderRadius="md"
+              p={4}
+              bg="white"
+              w="100%"
+              maxH="200px"
+              overflowY="auto"
+            >
+              <TableContainer>
+                <Table size="sm">
+                  <Thead>
+                    <Tr>
+                      <Th>Nº</Th>
+                      <Th>Brancas</Th>
+                      <Th>Pretas</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {moveHistory.map((move, index) => (
+                      <Tr key={index}>
+                        <Td>{move.number}</Td>
+                        <Td>{move.white || '-'}</Td>
+                        <Td>{move.black || '-'}</Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </TableContainer>
+            </Box>
+
+            {/* Chat */}
+            <Box
+              height="200px"
+              overflowY="auto"
+              borderWidth={1}
+              borderRadius="md"
+              p={4}
+              bg="white"
+              w="100%"
+            >
+              <List spacing={3}>
+                {messages.map((message, index) => (
+                  <ListItem
+                    key={index}
+                    bg={message.sender === user.username ? 'blue.100' : 'gray.100'}
+                    p={2}
+                    borderRadius="md"
+                  >
+                    <Text fontWeight="bold">{message.sender}</Text>
+                    <Text>{message.content}</Text>
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+          </VStack>
           <form onSubmit={sendMessage}>
             <Grid templateColumns="1fr auto" gap={2}>
               <Input

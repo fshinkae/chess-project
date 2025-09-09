@@ -7,11 +7,16 @@ const app = express();
 
 const PORT = process.env.PORT || 3002;
 
-mongoose.connect('mongodb://localhost:27017/chat_db')
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/chat_db')
   .then(() => console.log('Conectado ao MongoDB'))
   .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
 
-app.use(cors());
+app.use(cors({
+  origin: /http:\/\/localhost:\d+/,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
 app.use(express.json());
 
 app.use('/', chatRoutes);

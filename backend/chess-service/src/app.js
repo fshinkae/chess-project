@@ -1,10 +1,15 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const cors = require('cors');
 
 const app = express();
 
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27018/chess_db')
+  .then(() => console.log('Conectado ao MongoDB'))
+  .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: /http:\/\/localhost:\d+/,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true

@@ -7,10 +7,12 @@ const onlineUsers = require('./src/services/onlineUsers.service');
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
-    methods: ["GET", "POST"],
-    credentials: true
-  }
+    origin: /http:\/\/localhost:\d+/,
+    methods: ["GET", "POST", "OPTIONS"],
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"]
+  },
+  transports: ['websocket', 'polling']
 });
 
 // Middleware para autenticação do Socket.IO
@@ -122,7 +124,7 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = 3002;
+const PORT = process.env.PORT || 3002;
 
 server.listen(PORT, () => {
   console.log(`Chat Service rodando na porta ${PORT}`);

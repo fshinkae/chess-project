@@ -35,6 +35,15 @@ class GameService {
       this.setupErrorHandlers(this.chessSocket, 'Chess');
       this.setupErrorHandlers(this.chatSocket, 'Chat');
 
+      // Entrar nas salas do jogo
+      this.chessSocket.on('connect', () => {
+        this.chessSocket.emit('join_game_room', { gameId });
+      });
+
+      this.chatSocket.on('connect', () => {
+        this.chatSocket.emit('join_game_room', { gameId });
+      });
+
       return {
         chessSocket: this.chessSocket,
         chatSocket: this.chatSocket
@@ -106,6 +115,94 @@ class GameService {
       return true;
     } catch (error) {
       console.error('Erro ao enviar movimento:', error);
+      return false;
+    }
+  }
+
+  // Métodos de empate
+  offerDraw(gameId) {
+    if (!this.chessSocket?.connected) return false;
+    try {
+      this.chessSocket.emit('offer_draw', { gameId });
+      return true;
+    } catch (error) {
+      console.error('Erro ao propor empate:', error);
+      return false;
+    }
+  }
+
+  acceptDraw(gameId) {
+    if (!this.chessSocket?.connected) return false;
+    try {
+      this.chessSocket.emit('accept_draw', { gameId });
+      return true;
+    } catch (error) {
+      console.error('Erro ao aceitar empate:', error);
+      return false;
+    }
+  }
+
+  declineDraw(gameId) {
+    if (!this.chessSocket?.connected) return false;
+    try {
+      this.chessSocket.emit('decline_draw', { gameId });
+      return true;
+    } catch (error) {
+      console.error('Erro ao recusar empate:', error);
+      return false;
+    }
+  }
+
+  // Método de desistência
+  resign(gameId) {
+    if (!this.chessSocket?.connected) return false;
+    try {
+      this.chessSocket.emit('resign', { gameId });
+      return true;
+    } catch (error) {
+      console.error('Erro ao desistir:', error);
+      return false;
+    }
+  }
+
+  // Métodos de revanche
+  proposeRematch(gameId) {
+    if (!this.chessSocket?.connected) return false;
+    try {
+      this.chessSocket.emit('propose_rematch', { gameId });
+      return true;
+    } catch (error) {
+      console.error('Erro ao propor revanche:', error);
+      return false;
+    }
+  }
+
+  acceptRematch(gameId) {
+    if (!this.chessSocket?.connected) {
+      console.error('Socket do xadrez não está conectado');
+      return false;
+    }
+
+    try {
+      this.chessSocket.emit('accept_rematch', { gameId });
+      return true;
+    } catch (error) {
+      console.error('Erro ao aceitar revanche:', error);
+      return false;
+    }
+  }
+
+  declineRematch(gameId) {
+    if (!this.chessSocket?.connected) {
+      console.error('Socket do xadrez não está conectado');
+      return false;
+    }
+
+    try {
+      this.chessSocket.emit('decline_rematch', { gameId });
+      return true;
+    } catch (error) {
+      console.error('Erro ao recusar revanche:', error);
       return false;
     }
   }
