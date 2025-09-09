@@ -4,7 +4,7 @@
 
 Uma plataforma moderna de xadrez online construída com arquitetura de microsserviços, permitindo que jogadores se conectem e joguem em tempo real. O projeto foi desenvolvido com foco em escalabilidade, performance e experiência do usuário.
 
-PPT: https://excalidraw.com/#json=RiylON-aRuEHVDxRh_o7k,ULlzLM0pxiYSWz7-WoUrMg
+PPT: [https://excalidraw.com/#json=RiylON-aRuEHVDxRh_o7k,ULlzLM0pxiYSWz7-WoUrMg](https://excalidraw.com/#json=dU5CemLbxDV5IgTQKfFbO,iKK-gBMxr99EhezxHoVgEQ)
 
 ### Equipe
 Felipe Shinkae (CEO, Fullstack)
